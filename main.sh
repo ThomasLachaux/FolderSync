@@ -1,8 +1,18 @@
 #!/bin/bash -e
 
 # Doit pouvoir être overridden par des variables d'environnement du même nom
-folderA="./syncA"
-folderB="./syncB"
+if [[ -d $1 ]]; then
+	folderA=$1
+else 
+	echo "Le premier argument n'est pas un dossier."
+	exit 1
+fi
+if [[ -d $2 ]]; then
+	folderB=$2
+else
+	echo "Le deuxième argument n'est pas un dossier."
+	exit 1
+fi
 journalPath="./journal.txt"
 
 # Supprime les ./ si il existe, très utile quand on fera de la saisie

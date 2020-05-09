@@ -1,9 +1,13 @@
 #!/bin/bash -e
 
 # Doit pouvoir être overridden par des variables d'environnement du même nom
-FOLDER_A="./syncA"
-FOLDER_B="./syncB"
-JOURNAL_PATH="./journal.txt"
+folderA="./syncA"
+folderB="./syncB"
+journalPath="./journal.txt"
+
+# Supprime les ./ si il existe, très utile quand on fera de la saisie
+folderA=$(echo $folderA | sed 's/^\.\///')
+folderB=$(echo $folderB | sed 's/^\.\///')
 
 log() {
   echo -e "\e[90m[$(date +"%Y-%m-%d %H:%M:%S")]\e[39m $@"
@@ -26,51 +30,60 @@ error() {
   exit 1
 }
 
-checkBaseFolders() {
-  [[ -d $FOLDER_A ]] || error "Le dossier A n'existe pas"
-  [[ -d $FOLDER_B ]] || error "Le dossier B n'existe pas"
+checkFolders() {
+  [[ -d $folderA ]] || error "Le dossier A n'existe pas"
+  [[ -d $folderB ]] || error "Le dossier B n'existe pas"
 }
+
+# Liste le dossier récursivement et supprime le dossier racine
+listFolder() {
+  folderName=$1
+  find $folderName | cut -d / -f 2- | sed '1d'
+}
+
+listFolderExplicit() {
+  folderName=$1
+  # Supprime les lignes commençant par total
+  find $folderName -exec ls -ld --time-style='+%Y-%m-%d %H:%m' {} + | sed '1d' | sed "s/$folderName\///"
+}
+
 
 getJournal() {
-  # Crée le journal s'il n'existe pas
-  if [[ ! -f $JOURNAL_PATH ]]; then
-    touch $JOURNAL_PATH
+  # Crée le journal s'il n'existe pas et synchronise A --> B
+  if [[ ! -f $journalPath ]]; then
+    rm -rf $folderB
+    cp -r $folderA $folderB
+    listFolderExplicit $folderA > $journalPath
+    echo "Dossier synchronisé"
+    exit 0
   fi
 }
 
-checkBaseFolders
+listJournal() {
+  cat $journalPath | awk '{print $8}'
+}
+
+checkFolders
 getJournal
 
-a_content=($(ls $FOLDER_A))
-b_content=($(ls $FOLDER_B))
 
-lengthA=${#a_content[@]}
-lengthB=${#b_content[@]}
+for file in $(listFolder $folderA); do
+  metadataA=$(ls $folderA/$file)
 
-debug "Dossier A: $lengthA fichier(s)"
-debug "Dossier B: $lengthB fichier(s)"
+  # Check if file or directory exists
+  if [[ ! -e $folderB/$file ]]; then
+    echo "Fichier manquant ! : $file"
+    # grep -Fx checks all the line and ignore special character which can be in the ${file}
+    if [[ $(listJournal | grep -Fx "${file}") ]]; then
+      # Le fichier existe dans le journal
+      rm -rv $folderA/$file
 
-indexA=0
-indexB=0
+    else
+      echo "Le fichier n'existe pas dans le journal"
+      # check si le fichier est un dossier ou ono
+      [[ -d $folderA/$file ]] && cp -vr --parents $folderA/$file $folderB/$file || cp $folderA/$file $folderB/$file
 
-itemA=${a_content[$indexA]}
-itemB=${b_content[$indexB]}
-
-absoluteItemA="$FOLDER_A/$itemA/"
-absoluteItemB="$FOLDER_B/$itemB"
-
-debug "Compare $itemA et $itemB"
-
-if [[ $itemA == $itemB ]]; then
-  if [[ -d $absoluteItemA && -f $absoluteItemB ]]; then
-    error "$absoluteItemA est un dossier et $absoluteItemB est un fichier"
-
-  elif [[ -f $absoluteItemA && -d $absoluteItemB ]]; then
-    error "$absoluteItemA est un fichier et $absoluteItemB est un dossier"
-
-  else
-    debug "$absoluteItemB"
+    fi
   fi
-else
-  debug "$absoluteItemA différent de $absoluteItemB"
-fi
+done
+listFolderExplicit $folderA > $journalPath

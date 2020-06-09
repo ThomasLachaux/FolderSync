@@ -20,27 +20,6 @@ journalPath="./journal.txt"
 folderA=$(echo $folderA | sed 's/^\.\///')
 folderB=$(echo $folderB | sed 's/^\.\///')
 
-log() {
-  echo -e "\e[90m[$(date +"%Y-%m-%d %H:%M:%S")]\e[39m $@"
-}
-
-warn() {
-  log "\e[33mWARN:\e[39m $@"
-}
-
-info() {
-  log "\e[32mINFO:\e[39m $@"
-}
-
-debug() {
-  log "\e[34mDEBUG:\e[39m $@"
-}
-
-error() {
-  log "\e[31mERROR:\e[39m $@"
-  exit 1
-}
-
 checkFolders() {
   [[ -d $folderA ]] || error "Le dossier A n'existe pas"
   [[ -d $folderB ]] || error "Le dossier B n'existe pas"
@@ -88,27 +67,37 @@ for file in $(listFolder $folderA); do
       journalDate=$(getJournalFileMetadatas ${file})
 
       if [[ $(getFileMetadatas $folderA/$file) != $(getFileMetadatas $folderB/$file) ]]; then
-        if [[ $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then
+        # Actuellement comparer la date et les permission + proprio + groupe que ce soit un fichier ou un dossier
+
+        # Si c'est un fichier: comparer la date et les permission + proprio + groupe pour vérifier si un conflit existe
+        # Si c'est un dossier: comprare juste les permission + proprio + groupe
+
+        if [[ -f $folderA/$file && $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then
 
           unset REPLY
 
           while [[ $REPLY != 1 || $REPLY != 2 ]] ; do
+          echo $file
             echo "Conflit sur le fichier $file !"
             echo "1) Garder $folderA/$file"
             echo "2) Garder $folderB/$file"
-
+            echo "3) Afficher les différences"
             read
-      
             if [[ $REPLY == 1 ]]; then
               checkAndCopy $folderA/$file $folderB/$file
               break
             elif [[ $REPLY == 2 ]]; then
               checkAndCopy $folderB/$file $folderA/$file
               break
+            elif [[ $REPLY == 3 ]]; then
+              if [[ -f $folderA/$file ]]; then 
+                diff -y --suppress-common-lines $folderA/$file $folderB/$file || true
+              fi
             else 
               echo "Entrée incorrecte"
             fi
           done
+
 
         else
           if [[ $journalDate !=  $(getFileMetadatas $folderA/$file) ]]; then

@@ -44,9 +44,7 @@ listJournal() {
 checkFolders
 getJournal
 
-sync() {
-
-$tree_level=0
+sync() { 
 
 for file in $(listFolder $folderA); do
 

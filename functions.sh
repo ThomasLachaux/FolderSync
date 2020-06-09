@@ -110,3 +110,9 @@ popCurrentDir() {
   folder=$1
   echo $folder | sed 's/^\.\///'
 }
+
+# Get three first metadatas from a ls output
+compareFoldersMeta123() {
+  folder=$1
+  ls -ld $folder | awk '{print ($1,$2,$3)}'
+}

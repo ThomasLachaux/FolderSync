@@ -46,6 +46,8 @@ getJournal
 
 sync() {
 
+$tree_level=0
+
 for file in $(listFolder $folderA); do
 
   folderA=$1
@@ -67,12 +69,12 @@ for file in $(listFolder $folderA); do
       journalDate=$(getJournalFileMetadatas ${file})
 
       if [[ $(getFileMetadatas $folderA/$file) != $(getFileMetadatas $folderB/$file) ]]; then
-        # Actuellement comparer la date et les permission + proprio + groupe que ce soit un fichier ou un dossier
 
         # Si c'est un fichier: comparer la date et les permission + proprio + groupe pour vérifier si un conflit existe
         # Si c'est un dossier: comprare juste les permission + proprio + groupe
 
-        if [[ -f $folderA/$file && $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then
+        # Si c'est un fichier
+        if [[ -f $folderA/$file && $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then 
 
           unset REPLY
 
@@ -97,6 +99,10 @@ for file in $(listFolder $folderA); do
               echo "Entrée incorrecte"
             fi
           done
+
+	# Si c'est un dossier
+	elif [[ -d $folderA/$file && $journalDate != $(compareFoldersMeta122 $folderA/$file) && $journalDate != $(compareFoldersMeta123 $folderB/$file) ]]; then
+
 
 
         else

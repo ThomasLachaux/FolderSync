@@ -101,7 +101,7 @@ for file in $(listFolder $folderA); do
           done
 
 	# Si c'est un dossier
-	elif [[ -d $folderA/$file && $journalDate != $(compareFoldersMeta122 $folderA/$file) && $journalDate != $(compareFoldersMeta123 $folderB/$file) ]]; then
+##	elif [[ -d $folderA/$file && $journalDate != $(compareFoldersMeta122 $folderA/$file) && $journalDate != $(compareFoldersMeta123 $folderB/$file) ]]; then
 
 
 

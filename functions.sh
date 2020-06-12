@@ -26,6 +26,23 @@ checkFolders() {
   [[ -d $folderB ]] || error "Le dossier B n'existe pas"
 }
 
+# Utilisée en cas d'erreur
+wantToContinue() {
+  while [[ $REPLY != 1 || $REPLY != 2 ]] ; do
+    echo "Voulez-vous continuer la synchronisation ?"
+    echo "1) Oui"
+    echo "2) Non"
+    unset REPLY
+    read
+    if [[ $REPLY == 1 ]]; then 
+      break
+    else
+      exit 0
+    fi
+  done
+}
+
+
 # Liste le dossier récursivement et supprime le dossier racine
 listFolder() {
   folderName=$1
@@ -59,8 +76,9 @@ getJournal() {
   if [[ ! -f $journalPath ]]; then
     rm -rf $folderB
     cp -r $folderA $folderB
+    log "Copie $folderA --> $folderB"
     listFolderExplicit $folderA > $journalPath
-    echo "Dossier synchronisé"
+    log "Synchronisation terminée"
     exit 0
   fi
 }
@@ -87,19 +105,30 @@ getJournalFileMetadatas() {
 checkAndCopy() {
   if [[ -f $1 ]]; then
     cp -p $1 $2
+    log "Copie $1 --> $2"
   else
     # Verifie si le proprio/groupe a changé
     if [[ $(getFileOwner $1) != $(getFileOwner $2) ]]; then
       # Seul le root peut lancer chown, verification si on est root
       if [[ $UID == 0 ]]; then
         chown $(getFileOwner $1) $2
+        log "Changement de propriétaire [$1] pour $2"
       else
-        echo "La possession du dossier $1 est différente du dossier $2 et seul le root peut le modifier"
+        error "La possession du dossier $1 est différente du dossier $2 et seul le root peut le modifier"
+        wantToContinue
       fi
     fi
 
     if [[ $(getFilePermissions $1) != $(getFilePermissions $2) ]]; then
-      chmod $(getFilePermissions $1) $2 2> /dev/null || echo "Vous n'avez pas les droits pour modifier $2"
+      chmod $(getFilePermissions $1) $2 2> /dev/null || 
+
+      if [[ $(chmod $(getFilePermissions $1) $2) ]]; then
+        log "Chagnement de droits [$1] pour $2"
+
+      else
+        error "Vous n'avez pas les droits pour modifier $2"
+        wantToContinue
+      fi
     fi
   fi
 }
@@ -111,8 +140,9 @@ popCurrentDir() {
   echo $folder | sed 's/^\.\///'
 }
 
-# Get three first metadatas from a ls output
-compareFoldersMeta123() {
+# Récupère les métadonnées utiles d'un dossier (droits, proprio, groupe)
+getFolderMetadatas() {
   folder=$1
-  ls -ld $folder | awk '{print ($1,$2,$3)}'
+  ls -ld $folder | awk '{print ($1,$3,$4)}'
 }
+

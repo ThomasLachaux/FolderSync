@@ -3,13 +3,13 @@
 source ./functions.sh
 # Doit pouvoir être overridden par des variables d'environnement du même nom
 if [[ -d $1 ]]; then
-	folderA=$1
+	inputA=$1
 else
 	echo "Le premier argument n'est pas un dossier."
 	exit 1
 fi
 if [[ -d $2 ]]; then
-	folderB=$2
+	inputB=$2
 else
 	echo "Le deuxième argument n'est pas un dossier."
 	exit 1
@@ -17,22 +17,21 @@ fi
 journalPath="./journal.txt"
 
 # Supprime les ./ si il existe, très utile quand on fera de la saisie
-folderA=$(echo $folderA | sed 's/^\.\///')
-folderB=$(echo $folderB | sed 's/^\.\///')
+inputA=$(echo $inputA | sed 's/^\.\///')
+inputB=$(echo $inputB | sed 's/^\.\///')
 
 checkFolders() {
-  [[ -d $folderA ]] || error "Le dossier A n'existe pas"
-  [[ -d $folderB ]] || error "Le dossier B n'existe pas"
+  [[ -d $inputA ]] || error "Le dossier A n'existe pas"
+  [[ -d $inputB ]] || error "Le dossier B n'existe pas"
 }
-
 
 getJournal() {
   # Crée le journal s'il n'existe pas et synchronise A --> B
   if [[ ! -f $journalPath ]]; then
-    rm -rf $folderB
-    cp -pr $folderA $folderB
-    log "Copie $folderA --> $folderB"
-    listFolderExplicit $folderA > $journalPath
+    rm -rf $inputB
+    cp -pr $inputA $inputB
+    log "Copie $inputA --> $inputB"
+    listFolderExplicit $inputA > $journalPath
     echo "Dossier synchronisé"
     exit 0
   fi
@@ -47,10 +46,10 @@ getJournal
 
 sync() { 
 
-  for file in $(listFolder $folderA); do
+  folderA=$1
+  folderB=$2
 
-    folderA=$1
-    folderB=$2
+  for file in $(listFolder $folderA); do
 
     metadataA=$(ls $folderA/$file)
     # Regarde si le fichier existe dans la destination
@@ -148,6 +147,7 @@ sync() {
   # Ajout dans le journal
   listFolderExplicit $folderA > $journalPath
 }
-sync $folderA $folderB
+sync $inputA $inputB
+sync $inputB $inputA
 
 info "Synchronisation terminée"

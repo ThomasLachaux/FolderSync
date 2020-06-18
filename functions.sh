@@ -20,12 +20,6 @@ error() {
   exit 1
 }
 
-# Folder functions
-checkFolders() {
-  [[ -d $folderA ]] || error "Le dossier A n'existe pas"
-  [[ -d $folderB ]] || error "Le dossier B n'existe pas"
-}
-
 # Utilisée en cas d'erreur
 wantToContinue() {
   while [[ $REPLY != 1 || $REPLY != 2 ]] ; do
@@ -34,7 +28,7 @@ wantToContinue() {
     echo "2) Non"
     unset REPLY
     read
-    if [[ $REPLY == 1 ]]; then 
+    if [[ $REPLY == 1 ]]; then
       break
     else
       exit 0
@@ -68,19 +62,6 @@ getFileOwner() {
 # Prints the permissions in octal
 getFilePermissions() {
   ls -ld $1 | awk '{k=0;for(i=0;i<=8;i++)k+=((substr($1,i+2,1)~/[rwx]/)*2^(8-i));if(k)printf("%0o ",k);print $1}' | cut -c -3
-}
-
-
-getJournal() {
-  # Crée le journal s'il n'existe pas et synchronise A --> B
-  if [[ ! -f $journalPath ]]; then
-    rm -rf $folderB
-    cp -r $folderA $folderB
-    log "Copie $folderA --> $folderB"
-    listFolderExplicit $folderA > $journalPath
-    log "Synchronisation terminée"
-    exit 0
-  fi
 }
 
 getJournalFileName() {
@@ -120,7 +101,7 @@ checkAndCopy() {
     fi
 
     if [[ $(getFilePermissions $1) != $(getFilePermissions $2) ]]; then
-      chmod $(getFilePermissions $1) $2 2> /dev/null || 
+      chmod $(getFilePermissions $1) $2 2> /dev/null ||
 
       if [[ $(chmod $(getFilePermissions $1) $2) ]]; then
         log "Chagnement de droits [$1] pour $2"

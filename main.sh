@@ -20,31 +20,25 @@ journalPath="./journal.txt"
 inputA=$(echo $inputA | sed 's/^\.\///')
 inputB=$(echo $inputB | sed 's/^\.\///')
 
-checkFolders() {
-  [[ -d $inputA ]] || error "Le dossier A n'existe pas"
-  [[ -d $inputB ]] || error "Le dossier B n'existe pas"
-}
+# Vérifie si les dossiers existent
+[[ -d $inputA ]] || error "Le dossier A n'existe pas"
+[[ -d $inputB ]] || error "Le dossier B n'existe pas"
 
-getJournal() {
-  # Crée le journal s'il n'existe pas et synchronise A --> B
-  if [[ ! -f $journalPath ]]; then
-    rm -rf $inputB
-    cp -pr $inputA $inputB
-    log "Copie $inputA --> $inputB"
-    listFolderExplicit $inputA > $journalPath
-    echo "Dossier synchronisé"
-    exit 0
-  fi
-}
+# Crée le journal s'il n'existe pas et synchronise A --> B
+if [[ ! -f $journalPath ]]; then
+  rm -rf $inputB
+  cp -pr $inputA $inputB
+  log "Copie $inputA --> $inputB"
+  listFolderExplicit $inputA > $journalPath
+  echo "Dossier synchronisé"
+  exit 0
+fi
 
 listJournal() {
   cat $journalPath | awk '{print $7}'
 }
 
-checkFolders
-getJournal
-
-sync() { 
+sync() {
 
   folderA=$1
   folderB=$2
@@ -64,7 +58,7 @@ sync() {
       elif [[ -d $folderA/$file && -f $folderB/$file ]]; then
         warn "Conflit ! $folderA/$file est un dossier et $folderB/$file est un fichier"
         wantToContinue
-      
+
       # Sinon, récupère le fichier dans le journal
       elif [[ $(getJournalFileName ${file}) ]]; then
         journalDate=$(getJournalFileMetadatas ${file})
@@ -76,7 +70,7 @@ sync() {
           # Si c'est un dossier: comprare juste les permission + proprio + groupe
 
           # Si c'est un fichier
-          if [[ -f $folderA/$file && $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then 
+          if [[ -f $folderA/$file && $journalDate != $(getFileMetadatas $folderA/$file) && $journalDate != $(getFileMetadatas $folderB/$file) ]]; then
             while [[ $REPLY != 1 || $REPLY != 2 ]] ; do
               warn "Conflit sur le fichier $file !"
               echo "1) Garder $folderA/$file"
@@ -90,15 +84,15 @@ sync() {
                 checkAndCopy $folderB/$file $folderA/$file
                 break
               elif [[ $REPLY == 3 ]]; then
-                if [[ -f $folderA/$file ]]; then 
+                if [[ -f $folderA/$file ]]; then
                   diff -y --suppress-common-lines $folderA/$file $folderB/$file || true
                 fi
               fi
             done
 
-          # Si c'est un dossier, compare le seulement les droits, le proprio et le groupe 
+          # Si c'est un dossier, compare le seulement les droits, le proprio et le groupe
           elif [[ -d $folderA/$file && $journalDate != $(getFolderMetadatas $folderA/$file) && $journalDate != $(getFolderMetadatas $folderB/$file) ]]; then
-            
+
             while [[ $REPLY != 1 || $REPLY != 2 ]] ; do
               warn "Conflit sur le dossier $file !"
               echo "1) Garder $folderA/$file [$(getFolderMetadatas $folderA/$file)]"
@@ -117,7 +111,7 @@ sync() {
           else
             if [[ $journalDate !=  $(getFileMetadatas $folderA/$file) ]]; then
               checkAndCopy $folderA/$file $folderB/$file
-              
+
             elif [[ $journalDate !=  $(getFileMetadatas $folderB/$file) ]]; then
               checkAndCopy $folderB/$file $folderA/$file
             fi
